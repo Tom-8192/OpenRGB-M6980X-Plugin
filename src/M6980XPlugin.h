@@ -9,6 +9,7 @@
 #pragma once
 
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
 #include <memory>
 #include <mutex>
@@ -55,12 +56,21 @@ private:
     \*-----------------------------------------------------*/
     static void             CallbackUpdateMode(void* object_ptr);
     static void             CallbackUpdateZoneMode(void* object_ptr, int zone);
+    static void             CallbackUpdateLEDs(void* object_ptr);
+    static void             CallbackUpdateZoneLEDs(void* object_ptr, int zone);
+    static void             CallbackUpdateSingleLED(void* object_ptr, int led);
 
-    void                    RequestApply();
+    void                    Wake();
     void                    WorkerThread();
     void                    Connect();
     void                    Disconnect();
     void                    Cycle();
+    void                    ApplyStatic(unsigned char profile);
+    bool                    ShowStaticColor(unsigned char profile);
+    void                    CyclePerProfile();
+    bool                    ShowDeviceColors();
+    int                     LoadModeSetting();
+    void                    SaveModeSetting(int mode);
     void                    HandleError(m6980x::Status status, const char* action);
     void                    SetStatus(const std::string& text);
     void                    LogOnce(unsigned int level, const std::string& text);
@@ -79,11 +89,11 @@ private:
     std::atomic<bool>                   worker_done{false};
 
     /*-----------------------------------------------------*\
-    | Set once OpenRGB applied a colour; until then the     |
-    | plugin never writes, so starting OpenRGB alone does   |
-    | not change the mouse                                  |
+    | Set by the controller callbacks: OpenRGB applied a    |
+    | mode/mode colour, or changed the per-profile colours  |
     \*-----------------------------------------------------*/
-    std::atomic<bool>                   owned{false};
+    std::atomic<bool>                   mode_dirty{false};
+    std::atomic<bool>                   leds_dirty{false};
 
     /*-----------------------------------------------------*\
     | Worker-only state                                     |
@@ -92,7 +102,12 @@ private:
     std::unique_ptr<m6980x::Mouse>      mouse;
     RGBControllerInterface*             controller          = nullptr;
     int                                 last_profile        = -1;
-    RGBColor                            wanted_color        = 0;
+    int                                 last_mode           = -1;
+    /*-----------------------------------------------------*\
+    | Per-profile mode: colours waiting to become stable    |
+    \*-----------------------------------------------------*/
+    m6980x::Levels                      pending[m6980x::PROFILES];
+    std::chrono::steady_clock::time_point pending_since;
     unsigned int                        failures            = 0;
     std::string                         last_logged;
 

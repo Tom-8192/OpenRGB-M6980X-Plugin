@@ -3,7 +3,7 @@
 [English](README.md)
 
 Ein Plugin für [OpenRGB](https://gitlab.com/CalcProgrammer1/OpenRGB) **1.0**, das die Maus **Gigabyte GHOST
-M6980X** (USB `E0FF:0001`, OEM Areson) als Gerät mit einer **statischen** Farbe hinzufügt.
+M6980X** (USB `E0FF:0001`, OEM Areson) mit ihren LED-Farben pro Profil hinzufügt.
 
 Das Protokoll stammt aus dem Reverse Engineering für das M6980X Configuration Tool (`m6980x-driver`); das
 Plugin nutzt davon nur den LED-Teil.
@@ -20,10 +20,17 @@ Plugin nutzt davon nur den LED-Teil.
 
 ## Verhalten
 
-- Das Plugin schreibt die Farbe nur ins **aktive Profil**. Wechselst du mit der Profiltaste, schreibt es die
-  OpenRGB-Farbe auch ins neue Profil (Prüfung alle 0,5 s).
-- Der bloße Start von OpenRGB ändert nichts: Das Plugin bleibt passiv, bis in OpenRGB eine Farbe angewendet wird
-  (von Hand oder durch Laden eines OpenRGB-Profils).
+Zwei Modi, Auswahl in der Geräteansicht (das Plugin merkt sich die letzte Wahl):
+
+- **Per profile** (Standard): drei LEDs *Profile 1–3*, jede setzt direkt die Farbe ihres Hardware-Profils, auch
+  bei inaktiven Profilen. Geschrieben wird, sobald die Farbe eine Sekunde unverändert blieb (Ziehen im
+  Farbwähler). Ein Profilwechsel schreibt nichts. Quick Colors setzen alle drei LEDs, also alle drei Profile.
+- **Static**: eine Farbe. Anwenden (auch per Quick Color) schreibt sie einmal ins **aktive Profil**. Nach einem
+  Wechsel mit der Profiltaste wird nichts geschrieben; OpenRGB zeigt die Farbe des neuen Profils an (Prüfung alle
+  0,5 s).
+
+- Der Start von OpenRGB oder ein Moduswechsel ändert nichts an der Maus, nur das Anwenden einer Farbe.
+- Keiner der Modi heißt „Direct“/„Custom“, Effekte und SDK-Clients übernehmen die Maus also nicht von selbst.
 - Ab- und Anstecken wird erkannt; das Gerät verschwindet und kommt wieder.
 - Das Plugin teilt sich die Sperre mit dem M6980X Configuration Tool (`Local\m6980x_configtool` unter Windows,
   `flock` auf dem hidraw-Gerät unter Linux), beide können also gleichzeitig laufen.
@@ -45,7 +52,8 @@ Plugin nutzt davon nur den LED-Teil.
 Windows 10, offizielles OpenRGB 1.0 (Windows 64-bit, Qt 6.8.3), an der echten Maus (16.10.2026): Erkennung,
 passiver Start, Farbwechsel (nur das aktive Profil wird geschrieben, bei unveränderter gerundeter Farbe gar
 nichts), Profilwechsel per Profiltaste, Ab-/Anstecken, Deaktivieren des Plugins, gleichzeitiger Betrieb mit
-`m6980x_configtool`. Linux: nur gebaut, noch nicht an der Maus ausprobiert.
+`m6980x_configtool`; beide Modi inklusive Quick Colors, mit der OpenRGB-Oberfläche als Client des
+OpenRGB-Windows-Dienstes (Plugin in der Oberfläche). Linux: nur gebaut, noch nicht an der Maus ausprobiert.
 
 ## Installation
 

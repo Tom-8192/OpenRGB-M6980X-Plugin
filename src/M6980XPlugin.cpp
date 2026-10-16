@@ -6,14 +6,19 @@
 |   The mouse has three RGB LEDs that always share one      |
 |   colour (their count shows the DPI stage) and stores one |
 |   colour per hardware profile, every channel with three   |
-|   levels only (off, half, full). The plugin offers a      |
-|   single "Static" mode and writes the colour into the     |
-|   active profile; when the profile button switches to     |
-|   another profile, the colour is written there as well.   |
+|   levels only (off, half, full). Two modes:               |
+|     "Per profile": three LEDs "Profile 1-3", each colour  |
+|       goes into its own profile; switching profiles       |
+|       writes nothing                                      |
+|     "Static": one colour, written into the active profile |
+|       once when it is applied (also by quick colours);    |
+|       after a profile switch it shows that profile's      |
+|       colour and writes nothing                           |
 |   There is no direct mode: the mouse keeps LED colours    |
 |   without a save command, so every write presumably goes  |
-|   to its flash, and the colour is only written when it    |
-|   differs from what the mouse already has.                |
+|   to its flash. Colours are only written when they differ |
+|   from what the mouse already has, per-profile colours    |
+|   only once they stayed unchanged for a second.           |
 |                                                           |
 |   SPDX-License-Identifier: GPL-2.0-or-later               |
 \*---------------------------------------------------------*/
@@ -49,6 +54,39 @@ static const std::chrono::milliseconds  POLL_DISCONNECTED(2000);
 | before the device is closed and opened again              |
 \*---------------------------------------------------------*/
 static const unsigned int               MAX_FAILURES = 10;
+/*---------------------------------------------------------*\
+| Per-profile colours must stay unchanged this long before  |
+| they are written (colour picker dragging, effects)        |
+\*---------------------------------------------------------*/
+static const std::chrono::milliseconds  SETTLE_TIME(1000);
+
+/*---------------------------------------------------------*\
+| Mode indices of the controller                            |
+\*---------------------------------------------------------*/
+enum
+{
+    MODE_PER_PROFILE    = 0,
+    MODE_STATIC         = 1,
+};
+
+static const char* const SETTINGS_KEY = "M6980XPlugin";
+
+static m6980x::Levels LevelsFromColor(RGBColor color)
+{
+    m6980x::Levels levels =
+    {
+        m6980x::LevelFromByte(RGBGetRValue(color)),
+        m6980x::LevelFromByte(RGBGetGValue(color)),
+        m6980x::LevelFromByte(RGBGetBValue(color)),
+    };
+
+    return levels;
+}
+
+static RGBColor ColorFromLevels(const m6980x::Levels& levels)
+{
+    return ToRGBColor(m6980x::ByteFromLevel(levels[0]), m6980x::ByteFromLevel(levels[1]), m6980x::ByteFromLevel(levels[2]));
+}
 
 M6980XPlugin::~M6980XPlugin()
 {
@@ -103,8 +141,12 @@ QWidget* M6980XPlugin::GetWidget()
         status_label->setTextInteractionFlags(Qt::TextSelectableByMouse);
         note->setWordWrap(true);
         note->setText("The mouse has one colour per hardware profile and 3 levels per channel (27 colours); "
-                      "OpenRGB colours are rounded to the nearest level. Only the active profile is written; "
-                      "after a switch with the profile button the colour follows within half a second. "
+                      "OpenRGB colours are rounded to the nearest level. Choose the behaviour with the mode in the "
+                      "device view:\n"
+                      "  Per profile: the LEDs \"Profile 1-3\" set the colour of each profile; switching profiles "
+                      "writes nothing.\n"
+                      "  Static: one colour (also from quick colours), written once into the active profile; after "
+                      "a switch with the profile button it shows that profile's colour and writes nothing.\n"
                       "Effects are not supported on purpose: the mouse stores every colour change permanently.");
 
         layout->addWidget(status_label);
@@ -213,18 +255,35 @@ void M6980XPlugin::SettingsManagerUpdated(unsigned int /*update_reason*/)
 \*---------------------------------------------------------*/
 void M6980XPlugin::CallbackUpdateMode(void* object_ptr)
 {
-    static_cast<M6980XPlugin*>(object_ptr)->RequestApply();
+    M6980XPlugin* plugin = static_cast<M6980XPlugin*>(object_ptr);
+    plugin->mode_dirty = true;
+    plugin->Wake();
 }
 
 void M6980XPlugin::CallbackUpdateZoneMode(void* object_ptr, int /*zone*/)
 {
-    static_cast<M6980XPlugin*>(object_ptr)->RequestApply();
+    CallbackUpdateMode(object_ptr);
 }
 
-void M6980XPlugin::RequestApply()
+void M6980XPlugin::CallbackUpdateLEDs(void* object_ptr)
 {
-    owned = true;
+    M6980XPlugin* plugin = static_cast<M6980XPlugin*>(object_ptr);
+    plugin->leds_dirty = true;
+    plugin->Wake();
+}
 
+void M6980XPlugin::CallbackUpdateZoneLEDs(void* object_ptr, int /*zone*/)
+{
+    CallbackUpdateLEDs(object_ptr);
+}
+
+void M6980XPlugin::CallbackUpdateSingleLED(void* object_ptr, int /*led*/)
+{
+    CallbackUpdateLEDs(object_ptr);
+}
+
+void M6980XPlugin::Wake()
+{
     {
         std::lock_guard<std::mutex> lock(wake_mutex);
         wake_pending = true;
@@ -310,78 +369,103 @@ void M6980XPlugin::Connect()
         }
 
         unsigned char   profile = 0;
-        m6980x::Levels  levels;
+        m6980x::Levels  levels[m6980x::PROFILES];
 
         status = candidate_mouse->ActiveProfile(profile);
 
-        if(status == m6980x::Status::Ok)
+        for(unsigned char p = 0; p < m6980x::PROFILES && status == m6980x::Status::Ok; p++)
         {
-            status = candidate_mouse->LedColor(profile, levels);
+            status = candidate_mouse->LedColor(p, levels[p]);
         }
 
         if(status != m6980x::Status::Ok)
         {
             SetStatus(std::string("Reading the mouse failed: ") + m6980x::StatusText(status));
-            LogOnce(LL_WARNING, path + ": reading profile/colour failed: " + m6980x::StatusText(status));
+            LogOnce(LL_WARNING, path + ": reading profile/colours failed: " + m6980x::StatusText(status));
             continue;
         }
 
         /*-------------------------------------------------*\
-        | Start with the colour the mouse shows, unless     |
-        | OpenRGB already set one before a reconnect        |
+        | "Per profile": one LED per hardware profile.      |
+        | Not called "Direct"/"Custom", so SDK clients and  |
+        | effects do not pick it by themselves              |
         \*-------------------------------------------------*/
-        RGBColor start_color = owned ? wanted_color
-                                     : ToRGBColor(m6980x::ByteFromLevel(levels[0]),
-                                                  m6980x::ByteFromLevel(levels[1]),
-                                                  m6980x::ByteFromLevel(levels[2]));
+        mode per_profile_mode;
+        per_profile_mode.name       = "Per profile";
+        per_profile_mode.value      = MODE_PER_PROFILE;
+        per_profile_mode.flags      = MODE_FLAG_HAS_PER_LED_COLOR | MODE_FLAG_AUTOMATIC_SAVE;
+        per_profile_mode.color_mode = MODE_COLORS_PER_LED;
 
+        /*-------------------------------------------------*\
+        | "Static": shows the colour of the active profile  |
+        \*-------------------------------------------------*/
         mode static_mode;
-        static_mode.name        = "Static";
-        static_mode.value       = 0;
-        static_mode.flags       = MODE_FLAG_HAS_MODE_SPECIFIC_COLOR | MODE_FLAG_AUTOMATIC_SAVE;
-        static_mode.colors_min  = 1;
-        static_mode.colors_max  = 1;
-        static_mode.color_mode  = MODE_COLORS_MODE_SPECIFIC;
-        static_mode.colors.push_back(start_color);
+        static_mode.name            = "Static";
+        static_mode.value           = MODE_STATIC;
+        static_mode.flags           = MODE_FLAG_HAS_MODE_SPECIFIC_COLOR | MODE_FLAG_AUTOMATIC_SAVE;
+        static_mode.colors_min      = 1;
+        static_mode.colors_max      = 1;
+        static_mode.color_mode      = MODE_COLORS_MODE_SPECIFIC;
+        static_mode.colors.push_back(ColorFromLevels(levels[profile]));
 
-        zone mouse_zone;
-        mouse_zone.name         = "Mouse";
-        mouse_zone.type         = ZONE_TYPE_SINGLE;
-        mouse_zone.leds_count   = 1;
-        mouse_zone.leds_min     = 1;
-        mouse_zone.leds_max     = 1;
-
-        led mouse_led;
-        mouse_led.name          = "LEDs";
+        zone profiles_zone;
+        profiles_zone.name          = "Profiles";
+        profiles_zone.type          = ZONE_TYPE_LINEAR;
+        profiles_zone.leds_count    = m6980x::PROFILES;
+        profiles_zone.leds_min      = m6980x::PROFILES;
+        profiles_zone.leds_max      = m6980x::PROFILES;
 
         RGBController_Setup setup = {};
-        setup.name              = M6980X_DEVICE_NAME;
-        setup.vendor            = "Gigabyte";
-        setup.description       = "Gigabyte GHOST M6980X mouse (OEM Areson), via the " M6980X_PLUGIN_NAME " plugin";
-        setup.version           = M6980X_PLUGIN_VERSION;
-        setup.location          = "HID: " + path;
-        setup.type              = DEVICE_TYPE_MOUSE;
-        setup.flags             = CONTROLLER_FLAG_VIRTUAL;
-        setup.active_mode       = 0;
+        setup.name                  = M6980X_DEVICE_NAME;
+        setup.vendor                = "Gigabyte";
+        setup.description           = "Gigabyte GHOST M6980X mouse (OEM Areson), via the " M6980X_PLUGIN_NAME " plugin";
+        setup.version               = M6980X_PLUGIN_VERSION;
+        setup.location              = "HID: " + path;
+        setup.type                  = DEVICE_TYPE_MOUSE;
+        setup.flags                 = CONTROLLER_FLAG_VIRTUAL;
+        setup.active_mode           = LoadModeSetting();
+        setup.modes.push_back(per_profile_mode);
         setup.modes.push_back(static_mode);
-        setup.zones.push_back(mouse_zone);
-        setup.leds.push_back(mouse_led);
-        setup.object_ptr        = this;
-        setup.DeviceUpdateMode  = &M6980XPlugin::CallbackUpdateMode;
-        setup.DeviceSaveMode    = &M6980XPlugin::CallbackUpdateMode;
-        setup.DeviceUpdateZoneMode = &M6980XPlugin::CallbackUpdateZoneMode;
+        setup.zones.push_back(profiles_zone);
+
+        for(unsigned int p = 0; p < m6980x::PROFILES; p++)
+        {
+            led profile_led;
+            profile_led.name        = "Profile " + std::to_string(p + 1);
+            profile_led.value       = p;
+            setup.leds.push_back(profile_led);
+        }
+
+        setup.object_ptr            = this;
+        setup.DeviceUpdateMode      = &M6980XPlugin::CallbackUpdateMode;
+        setup.DeviceSaveMode        = &M6980XPlugin::CallbackUpdateMode;
+        setup.DeviceUpdateZoneMode  = &M6980XPlugin::CallbackUpdateZoneMode;
+        setup.DeviceUpdateLEDs      = &M6980XPlugin::CallbackUpdateLEDs;
+        setup.DeviceUpdateZoneLEDs  = &M6980XPlugin::CallbackUpdateZoneLEDs;
+        setup.DeviceUpdateSingleLED = &M6980XPlugin::CallbackUpdateSingleLED;
 
         transport       = std::move(candidate);
         mouse           = std::move(candidate_mouse);
         last_profile    = profile;
+        last_mode       = setup.active_mode;
         failures        = 0;
+        leds_dirty      = false;
         controller      = api->CreateVirtualRGBController(&setup);
+
+        for(unsigned int p = 0; p < m6980x::PROFILES; p++)
+        {
+            controller->SetColor(p, ColorFromLevels(levels[p]));
+            pending[p] = levels[p];
+        }
 
         api->RegisterVirtualRGBController(controller);
 
-        char text[160];
-        snprintf(text, sizeof(text), "Connected (%s), profile %d, colour levels %u %u %u",
-                 path.c_str(), profile + 1, levels[0], levels[1], levels[2]);
+        char text[256];
+        snprintf(text, sizeof(text), "Connected (%s), profile %d active, colour levels %u %u %u / %u %u %u / %u %u %u",
+                 path.c_str(), profile + 1,
+                 levels[0][0], levels[0][1], levels[0][2],
+                 levels[1][0], levels[1][1], levels[1][2],
+                 levels[2][0], levels[2][1], levels[2][2]);
         SetStatus(text);
         last_logged.clear();
         M6980X_LOG(LL_INFO, "%s", text);
@@ -401,6 +485,7 @@ void M6980XPlugin::Disconnect()
     mouse.reset();
     transport.reset();
     last_profile    = -1;
+    last_mode       = -1;
     failures        = 0;
 }
 
@@ -415,36 +500,95 @@ void M6980XPlugin::Cycle()
         return;
     }
 
-    if((int)profile != last_profile)
+    failures = 0;
+
+    bool profile_changed = (int)profile != last_profile;
+
+    if(profile_changed)
     {
         M6980X_LOG(LL_VERBOSE, "active profile is now %d", profile + 1);
         last_profile = profile;
     }
 
-    if(!owned)
+    int     active_mode = controller->GetActiveMode();
+    bool    apply       = mode_dirty.exchange(false);
+
+    if(apply && active_mode != last_mode)
     {
-        failures = 0;
+        M6980X_LOG(LL_INFO, "mode is now %s", active_mode == MODE_STATIC ? "Static" : "Per profile");
+        SaveModeSetting(active_mode);
+        last_mode = active_mode;
+
+        /*-------------------------------------------------*\
+        | Switching the mode only shows what the mouse has; |
+        | nothing is written until a colour is applied      |
+        \*-------------------------------------------------*/
+        if(active_mode == MODE_PER_PROFILE)
+        {
+            ShowDeviceColors();
+        }
+        else if(active_mode == MODE_STATIC)
+        {
+            ShowStaticColor(profile);
+        }
+
         return;
     }
 
-    int active_mode = controller->GetActiveMode();
+    if(active_mode == MODE_STATIC)
+    {
+        /*-------------------------------------------------*\
+        | A colour applied in OpenRGB (also quick colours)  |
+        | goes into the active profile once; switching      |
+        | profiles writes nothing, OpenRGB then shows the   |
+        | colour of the new profile                         |
+        \*-------------------------------------------------*/
+        if(apply)
+        {
+            ApplyStatic(profile);
+        }
+        else if(profile_changed)
+        {
+            ShowStaticColor(profile);
+        }
+    }
+    else if(active_mode == MODE_PER_PROFILE)
+    {
+        if(apply)
+        {
+            leds_dirty = true;
+        }
 
-    if(active_mode < 0 || controller->GetModeColorsCount(active_mode) == 0)
+        CyclePerProfile();
+    }
+}
+
+bool M6980XPlugin::ShowStaticColor(unsigned char profile)
+{
+    m6980x::Levels levels;
+    m6980x::Status status = mouse->LedColor(profile, levels);
+
+    if(status != m6980x::Status::Ok)
+    {
+        HandleError(status, "reading the profile colour");
+        return false;
+    }
+
+    controller->SetModeColor(MODE_STATIC, 0, ColorFromLevels(levels));
+    controller->SignalUpdate(RGBCONTROLLER_UPDATE_REASON_UPDATEMODE);
+    return true;
+}
+
+void M6980XPlugin::ApplyStatic(unsigned char profile)
+{
+    if(controller->GetModeColorsCount(MODE_STATIC) == 0)
     {
         return;
     }
 
-    wanted_color = controller->GetModeColor(active_mode, 0);
-
-    m6980x::Levels levels =
-    {
-        m6980x::LevelFromByte(RGBGetRValue(wanted_color)),
-        m6980x::LevelFromByte(RGBGetGValue(wanted_color)),
-        m6980x::LevelFromByte(RGBGetBValue(wanted_color)),
-    };
-
-    bool written = false;
-    status = mouse->SetLedColor(profile, levels, written);
+    m6980x::Levels levels   = LevelsFromColor(controller->GetModeColor(MODE_STATIC, 0));
+    bool written            = false;
+    m6980x::Status status   = mouse->SetLedColor(profile, levels, written);
 
     if(status != m6980x::Status::Ok)
     {
@@ -452,16 +596,117 @@ void M6980XPlugin::Cycle()
         return;
     }
 
-    failures = 0;
-
     if(written)
     {
-        char text[128];
-        snprintf(text, sizeof(text), "Connected (%s), profile %d set to colour levels %u %u %u",
+        char text[256];
+        snprintf(text, sizeof(text), "Connected (%s), Static: profile %d set to colour levels %u %u %u",
                  transport->Path().c_str(), profile + 1, levels[0], levels[1], levels[2]);
         SetStatus(text);
         M6980X_LOG(LL_INFO, "profile %d set to colour levels %u %u %u", profile + 1, levels[0], levels[1], levels[2]);
     }
+}
+
+void M6980XPlugin::CyclePerProfile()
+{
+    if(!leds_dirty)
+    {
+        return;
+    }
+
+    /*-----------------------------------------------------*\
+    | Wait until the colours stayed unchanged for a while   |
+    \*-----------------------------------------------------*/
+    std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+    bool changed = false;
+
+    for(unsigned int p = 0; p < m6980x::PROFILES; p++)
+    {
+        m6980x::Levels levels = LevelsFromColor(controller->GetColor(p));
+
+        if(levels != pending[p])
+        {
+            pending[p]  = levels;
+            changed     = true;
+        }
+    }
+
+    if(changed)
+    {
+        pending_since = now;
+        return;
+    }
+
+    if(now - pending_since < SETTLE_TIME)
+    {
+        return;
+    }
+
+    leds_dirty = false;
+
+    for(unsigned char p = 0; p < m6980x::PROFILES; p++)
+    {
+        bool            written = false;
+        m6980x::Status  status  = mouse->SetLedColor(p, pending[p], written);
+
+        if(status != m6980x::Status::Ok)
+        {
+            leds_dirty = true;
+            HandleError(status, "setting a profile colour");
+            return;
+        }
+
+        if(written)
+        {
+            char text[256];
+            snprintf(text, sizeof(text), "Connected (%s), Per profile: profile %d set to colour levels %u %u %u",
+                     transport->Path().c_str(), p + 1, pending[p][0], pending[p][1], pending[p][2]);
+            SetStatus(text);
+            M6980X_LOG(LL_INFO, "profile %d set to colour levels %u %u %u", p + 1, pending[p][0], pending[p][1], pending[p][2]);
+        }
+    }
+}
+
+bool M6980XPlugin::ShowDeviceColors()
+{
+    for(unsigned char p = 0; p < m6980x::PROFILES; p++)
+    {
+        m6980x::Levels  levels;
+        m6980x::Status  status = mouse->LedColor(p, levels);
+
+        if(status != m6980x::Status::Ok)
+        {
+            HandleError(status, "reading the profile colours");
+            return false;
+        }
+
+        controller->SetColor(p, ColorFromLevels(levels));
+        pending[p] = levels;
+    }
+
+    leds_dirty = false;
+    controller->SignalUpdate(RGBCONTROLLER_UPDATE_REASON_UPDATELEDS);
+    return true;
+}
+
+int M6980XPlugin::LoadModeSetting()
+{
+    nlohmann::json settings = api->GetSettings(SETTINGS_KEY);
+
+    if(settings.contains("mode") && settings["mode"].is_string() && settings["mode"] == "static")
+    {
+        return MODE_STATIC;
+    }
+
+    return MODE_PER_PROFILE;
+}
+
+void M6980XPlugin::SaveModeSetting(int mode)
+{
+    nlohmann::json settings = api->GetSettings(SETTINGS_KEY);
+
+    settings["mode"] = (mode == MODE_STATIC) ? "static" : "per_profile";
+    api->SetSettings(SETTINGS_KEY, settings);
+    api->SaveSettings();
 }
 
 void M6980XPlugin::HandleError(m6980x::Status status, const char* action)

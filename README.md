@@ -3,7 +3,7 @@
 [Deutsch](README.de.md)
 
 An [OpenRGB](https://gitlab.com/CalcProgrammer1/OpenRGB) **1.0** plugin for the **Gigabyte GHOST M6980X**
-mouse (USB `E0FF:0001`, OEM Areson). It adds the mouse as a device with one **Static** colour.
+mouse (USB `E0FF:0001`, OEM Areson). It adds the mouse as a device with its per-profile LED colours.
 
 The protocol was reverse engineered for the M6980X Configuration Tool (`m6980x-driver`); this plugin uses only
 the LED part of it.
@@ -20,10 +20,17 @@ the LED part of it.
 
 ## Behaviour
 
-- The plugin writes the colour into the **active profile** only. When you switch profiles with the profile
-  button, the plugin writes the OpenRGB colour into the new profile as well (checked every 0.5 s).
-- Starting OpenRGB alone changes nothing: the plugin stays passive until a colour is applied in OpenRGB (by hand
-  or by loading an OpenRGB profile).
+Two modes, chosen in the device view (the plugin remembers the last choice):
+
+- **Per profile** (default): three LEDs *Profile 1–3*, each sets the colour of its hardware profile directly, also
+  of inactive profiles. A colour is written once it stayed unchanged for a second (colour picker dragging).
+  Switching profiles writes nothing. Quick colours set all three LEDs, so all three profiles.
+- **Static**: one colour. Applying it (also with quick colours) writes it once into the **active profile**. After a
+  switch with the profile button nothing is written; OpenRGB shows the colour of the new profile (checked every
+  0.5 s).
+
+- Starting OpenRGB or switching the mode changes nothing on the mouse; only applying a colour does.
+- Neither mode is called "Direct"/"Custom", so effects and SDK clients do not take it over by themselves.
 - Unplugging and replugging the mouse is detected; the device disappears and comes back.
 - The plugin shares a lock with the M6980X Configuration Tool (`Local\m6980x_configtool` on Windows, `flock`
   on the hidraw device on Linux), so both can run at the same time.
@@ -44,7 +51,8 @@ the LED part of it.
 Windows 10, official OpenRGB 1.0 (Windows 64-bit, Qt 6.8.3), on the real mouse (2026-10-16): detection,
 passive start, colour changes (only the active profile is written, nothing is written when the rounded colour is
 unchanged), profile switches with the profile button, unplugging/replugging, disabling the plugin, running at the
-same time as `m6980x_configtool`. Linux: build only, not yet tried on the mouse.
+same time as `m6980x_configtool`; both modes including quick colours, with the OpenRGB GUI running as client of the
+OpenRGB Windows service (plugin in the GUI). Linux: build only, not yet tried on the mouse.
 
 ## Installation
 
