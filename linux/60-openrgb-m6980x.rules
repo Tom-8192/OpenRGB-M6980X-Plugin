@@ -1,0 +1,4 @@
+# OpenRGB M6980X plugin (Gigabyte GHOST M6980X): access to /dev/hidraw* for the logged-in user
+# Same rule as the M6980X Configuration Tool; install one of them:
+# sudo cp 60-openrgb-m6980x.rules /etc/udev/rules.d/ && sudo udevadm control --reload && sudo udevadm trigger
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="e0ff", ATTRS{idProduct}=="0001", MODE="0660", TAG+="uaccess"
