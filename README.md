@@ -30,6 +30,9 @@ Two modes, chosen in the device view (the plugin remembers the last choice):
   0.5 s).
 
 - Starting OpenRGB or switching the mode changes nothing on the mouse; only applying a colour does.
+- **OpenRGB profiles** save the mode and colours in the plugin section of the profile. Loading a profile applies
+  them like a manual change (Static: into the active profile); only colours that differ are written. A profile
+  loaded before the mouse is plugged in is applied once it connects.
 - Neither mode is called "Direct"/"Custom", so effects and SDK clients do not take it over by themselves.
 - Unplugging and replugging the mouse is detected; the device disappears and comes back.
 - The plugin shares a lock with the M6980X Configuration Tool (`Local\m6980x_configtool` on Windows, `flock`

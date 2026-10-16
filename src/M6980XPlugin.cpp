@@ -36,7 +36,7 @@
 #include "LogManager.h"
 
 #define M6980X_PLUGIN_NAME      "M6980X"
-#define M6980X_PLUGIN_VERSION   "1.0.0"
+#define M6980X_PLUGIN_VERSION   "1.1.0"
 #define M6980X_PLUGIN_URL       "https://github.com/Tom-8192/OpenRGB-M6980X-Plugin"
 #define M6980X_DEVICE_NAME      "Gigabyte GHOST M6980X"
 
@@ -219,13 +219,46 @@ void M6980XPlugin::OnProfileAboutToLoad()
 {
 }
 
-void M6980XPlugin::OnProfileLoad(nlohmann::json /*profile_data*/)
+void M6980XPlugin::OnProfileLoad(nlohmann::json profile_data)
 {
+    if(!profile_data.is_object() || !profile_data.contains("mode"))
+    {
+        return;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(request_mutex);
+        profile_request     = profile_data;
+        has_profile_request = true;
+    }
+
+    Wake();
 }
 
 nlohmann::json M6980XPlugin::OnProfileSave()
 {
-    return nlohmann::json();
+    nlohmann::json data;
+
+    std::lock_guard<std::mutex> lock(controller_mutex);
+
+    if(controller == nullptr)
+    {
+        return data;
+    }
+
+    data["mode"] = (controller->GetActiveMode() == MODE_STATIC) ? "static" : "per_profile";
+
+    if(controller->GetModeColorsCount(MODE_STATIC) > 0)
+    {
+        data["static_color"] = controller->GetModeColor(MODE_STATIC, 0);
+    }
+
+    for(unsigned int p = 0; p < m6980x::PROFILES; p++)
+    {
+        data["profile_colors"][p] = controller->GetColor(p);
+    }
+
+    return data;
 }
 
 unsigned char* M6980XPlugin::OnSDKCommand(unsigned int /*pkt_id*/, unsigned char* /*pkt_data*/, unsigned int* pkt_size)
@@ -450,12 +483,18 @@ void M6980XPlugin::Connect()
         last_mode       = setup.active_mode;
         failures        = 0;
         leds_dirty      = false;
-        controller      = api->CreateVirtualRGBController(&setup);
+
+        RGBControllerInterface* created = api->CreateVirtualRGBController(&setup);
 
         for(unsigned int p = 0; p < m6980x::PROFILES; p++)
         {
-            controller->SetColor(p, ColorFromLevels(levels[p]));
+            created->SetColor(p, ColorFromLevels(levels[p]));
             pending[p] = levels[p];
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(controller_mutex);
+            controller = created;
         }
 
         api->RegisterVirtualRGBController(controller);
@@ -475,11 +514,18 @@ void M6980XPlugin::Connect()
 
 void M6980XPlugin::Disconnect()
 {
-    if(controller != nullptr)
+    RGBControllerInterface* removed = nullptr;
+
     {
-        api->UnregisterVirtualRGBController(controller);
-        api->DeleteVirtualRGBController(controller);
-        controller = nullptr;
+        std::lock_guard<std::mutex> lock(controller_mutex);
+        removed     = controller;
+        controller  = nullptr;
+    }
+
+    if(removed != nullptr)
+    {
+        api->UnregisterVirtualRGBController(removed);
+        api->DeleteVirtualRGBController(removed);
     }
 
     mouse.reset();
@@ -508,6 +554,11 @@ void M6980XPlugin::Cycle()
     {
         M6980X_LOG(LL_VERBOSE, "active profile is now %d", profile + 1);
         last_profile = profile;
+    }
+
+    if(ApplyProfileRequest(profile))
+    {
+        return;
     }
 
     int     active_mode = controller->GetActiveMode();
@@ -561,6 +612,71 @@ void M6980XPlugin::Cycle()
 
         CyclePerProfile();
     }
+}
+
+bool M6980XPlugin::ApplyProfileRequest(unsigned char profile)
+{
+    nlohmann::json data;
+
+    {
+        std::lock_guard<std::mutex> lock(request_mutex);
+
+        if(!has_profile_request)
+        {
+            return false;
+        }
+
+        data                = profile_request;
+        has_profile_request = false;
+    }
+
+    int mode = (data["mode"] == "static") ? MODE_STATIC : MODE_PER_PROFILE;
+
+    if(data.contains("static_color") && data["static_color"].is_number_unsigned())
+    {
+        controller->SetModeColor(MODE_STATIC, 0, data["static_color"].get<RGBColor>());
+    }
+
+    if(data.contains("profile_colors") && data["profile_colors"].is_array() && data["profile_colors"].size() == m6980x::PROFILES)
+    {
+        for(unsigned int p = 0; p < m6980x::PROFILES; p++)
+        {
+            if(data["profile_colors"][p].is_number_unsigned())
+            {
+                controller->SetColor(p, data["profile_colors"][p].get<RGBColor>());
+            }
+        }
+    }
+
+    if(mode != last_mode)
+    {
+        SaveModeSetting(mode);
+        last_mode = mode;
+    }
+
+    /*-----------------------------------------------------*\
+    | SetActiveMode also signals the GUI; the UpdateMode    |
+    | callback it triggers finds nothing left to write      |
+    \*-----------------------------------------------------*/
+    controller->SetActiveMode(mode);
+
+    M6980X_LOG(LL_INFO, "OpenRGB profile loaded, mode %s", mode == MODE_STATIC ? "Static" : "Per profile");
+
+    if(mode == MODE_STATIC)
+    {
+        ApplyStatic(profile);
+    }
+    else
+    {
+        /*-------------------------------------------------*\
+        | Written by CyclePerProfile once the colours       |
+        | stayed unchanged for SETTLE_TIME                  |
+        \*-------------------------------------------------*/
+        leds_dirty = true;
+        CyclePerProfile();
+    }
+
+    return true;
 }
 
 bool M6980XPlugin::ShowStaticColor(unsigned char profile)

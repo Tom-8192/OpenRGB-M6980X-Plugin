@@ -65,6 +65,7 @@ private:
     void                    Connect();
     void                    Disconnect();
     void                    Cycle();
+    bool                    ApplyProfileRequest(unsigned char profile);
     void                    ApplyStatic(unsigned char profile);
     bool                    ShowStaticColor(unsigned char profile);
     void                    CyclePerProfile();
@@ -94,6 +95,22 @@ private:
     \*-----------------------------------------------------*/
     std::atomic<bool>                   mode_dirty{false};
     std::atomic<bool>                   leds_dirty{false};
+
+    /*-----------------------------------------------------*\
+    | OpenRGB profiles: in client mode the server restores  |
+    | only its own devices, so the plugin stores mode and   |
+    | colours in the profile's plugin section itself. A     |
+    | loaded profile waits here until the worker applies it |
+    | (also when the mouse connects only after the load)    |
+    \*-----------------------------------------------------*/
+    std::mutex                          request_mutex;
+    nlohmann::json                      profile_request;
+    bool                                has_profile_request = false;
+    /*-----------------------------------------------------*\
+    | Guards the controller pointer against OnProfileSave   |
+    | on the GUI thread; only the worker changes it         |
+    \*-----------------------------------------------------*/
+    std::mutex                          controller_mutex;
 
     /*-----------------------------------------------------*\
     | Worker-only state                                     |

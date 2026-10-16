@@ -30,6 +30,9 @@ Zwei Modi, Auswahl in der Geräteansicht (das Plugin merkt sich die letzte Wahl)
   0,5 s).
 
 - Der Start von OpenRGB oder ein Moduswechsel ändert nichts an der Maus, nur das Anwenden einer Farbe.
+- **OpenRGB-Profile** speichern Modus und Farben im Plugin-Abschnitt des Profils. Das Laden eines Profils wendet
+  sie wie eine Änderung von Hand an (Static: ins aktive Profil); geschrieben werden nur abweichende Farben. Ein
+  Profil, das vor dem Anstecken der Maus geladen wurde, wird beim Verbinden angewendet.
 - Keiner der Modi heißt „Direct“/„Custom“, Effekte und SDK-Clients übernehmen die Maus also nicht von selbst.
 - Ab- und Anstecken wird erkannt; das Gerät verschwindet und kommt wieder.
 - Das Plugin teilt sich die Sperre mit dem M6980X Configuration Tool (`Local\m6980x_configtool` unter Windows,
