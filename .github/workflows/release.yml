@@ -18,7 +18,8 @@ jobs:
           submodules: true
       - name: Tag matches the version in M6980XPlugin.json
         shell: bash
-        run: grep -q "\"VersionStr\": \"${GITHUB_REF_NAME#v}\"" M6980XPlugin.json || { echo "Tag $GITHUB_REF_NAME does not match M6980XPlugin.json"; exit 1; }
+        run: |
+          grep -q "\"VersionStr\": \"${GITHUB_REF_NAME#v}\"" M6980XPlugin.json || { echo "Tag $GITHUB_REF_NAME does not match M6980XPlugin.json"; exit 1; }
       # same Qt and compiler as the official OpenRGB 1.0 Windows build
       - uses: jurplel/install-qt-action@v4
         with:
