@@ -25,7 +25,8 @@ Hardware-Profil, *Profile 1–3*:
 
 - Profil in der Zonenliste wählen (oder sein Kästchen in der LED-Ansicht anklicken), Farbe wählen und anwenden.
   Das geht auch bei inaktiven Profilen.
-- **Alle Zonen** wendet eine Farbe auf alle drei Profile an; Quick Colors tun dasselbe.
+- **Alle Zonen** wendet eine Farbe auf alle drei Profile an; Quick Colors tun dasselbe. Sollen die Profile
+  unterschiedliche Farben behalten (z. B. um Tastenbelegungen zu unterscheiden), die Zonen verwenden.
 - Geschrieben wird, sobald die Farbe eine Sekunde unverändert blieb (Ziehen im Farbwähler). Ein Profilwechsel mit
   der Profiltaste schreibt nichts.
 - Die LED-Liste neben der Zonenliste gehört zur Geräteansicht von OpenRGB und lässt sich nicht ausblenden; jede
@@ -70,8 +71,8 @@ OpenRGB-Profilen durch einen SDK-Client und die Plugin-Daten des aktiven Profils
 
 Plugin 1.3.0 (18.10.2026), gleicher Aufbau: Start, Laden von Profilen im neuen und im früheren Static-Format
 (geschrieben werden nur abweichende Profile), Profilwechsel, die neue Geräteansicht (ein Modus, Zonen
-*Profile 1–3*). Farben aus der Oberfläche auf eine einzelne Zone oder auf *Alle Zonen* anzuwenden, wurde an der
-Maus noch nicht ausprobiert.
+*Profile 1–3*), Quick Colors (alle drei Profile). Farben aus der Oberfläche auf eine einzelne Zone oder auf
+*Alle Zonen* anzuwenden, wurde an der Maus noch nicht ausprobiert.
 
 Linux: nur gebaut, noch nicht an der Maus ausprobiert.
 

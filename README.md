@@ -25,7 +25,8 @@ profile, *Profile 1–3*:
 
 - Pick a profile in the zone list (or click its box in the LED view), choose a colour and apply it. This works for
   inactive profiles too.
-- **All zones** applies a colour to all three profiles; quick colours do the same.
+- **All zones** applies a colour to all three profiles; quick colours do the same. Use the zones if the profiles
+  should keep different colours (for example to tell button mappings apart).
 - A colour is written once it stayed unchanged for a second (colour picker dragging). Switching profiles with the
   profile button writes nothing.
 - The LED list next to the zone list is part of OpenRGB's device view and cannot be hidden; every zone has only one
@@ -68,8 +69,8 @@ Official OpenRGB 1.1 with plugin 1.2.0 (2026-10-18), same setup: the tests above
 profiles from an SDK client and the active profile's plugin data at GUI start.
 
 Plugin 1.3.0 (2026-10-18), same setup: start, loading profiles in the new and in the former Static format (only
-differing profiles are written), profile switches, the new device view (one mode, zones *Profile 1–3*). Applying
-colours from the GUI to a single zone or to *All zones* was not yet tried on the mouse.
+differing profiles are written), profile switches, the new device view (one mode, zones *Profile 1–3*), quick colours (all three profiles).
+Applying colours from the GUI to a single zone or to *All zones* was not yet tried on the mouse.
 
 Linux: build only, not yet tried on the mouse.
 
