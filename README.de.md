@@ -71,8 +71,8 @@ OpenRGB-Profilen durch einen SDK-Client und die Plugin-Daten des aktiven Profils
 
 Plugin 1.3.0 (18.10.2026), gleicher Aufbau: Start, Laden von Profilen im neuen und im früheren Static-Format
 (geschrieben werden nur abweichende Profile), Profilwechsel, die neue Geräteansicht (ein Modus, Zonen
-*Profile 1–3*), Quick Colors (alle drei Profile). Farben aus der Oberfläche auf eine einzelne Zone oder auf
-*Alle Zonen* anzuwenden, wurde an der Maus noch nicht ausprobiert.
+*Profile 1–3*), Quick Colors und *Alle Zonen* (alle drei Profile). Eine Farbe aus der Oberfläche auf eine
+einzelne Zone anzuwenden, wurde an der Maus noch nicht ausprobiert.
 
 Linux: nur gebaut, noch nicht an der Maus ausprobiert.
 

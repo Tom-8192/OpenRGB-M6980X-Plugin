@@ -69,8 +69,8 @@ Official OpenRGB 1.1 with plugin 1.2.0 (2026-10-18), same setup: the tests above
 profiles from an SDK client and the active profile's plugin data at GUI start.
 
 Plugin 1.3.0 (2026-10-18), same setup: start, loading profiles in the new and in the former Static format (only
-differing profiles are written), profile switches, the new device view (one mode, zones *Profile 1–3*), quick colours (all three profiles).
-Applying colours from the GUI to a single zone or to *All zones* was not yet tried on the mouse.
+differing profiles are written), profile switches, the new device view (one mode, zones *Profile 1–3*), quick colours and *All zones* (all three profiles).
+Applying a colour from the GUI to a single zone was not yet tried on the mouse.
 
 Linux: build only, not yet tried on the mouse.
 
