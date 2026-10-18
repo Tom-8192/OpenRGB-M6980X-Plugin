@@ -20,27 +20,32 @@ Plugin nutzt davon nur den LED-Teil.
 
 ## Verhalten
 
-Zwei Modi, Auswahl in der Geräteansicht (das Plugin merkt sich die letzte Wahl):
+Unter *Geräte → Gigabyte GHOST M6980X* hat die Maus einen Modus (*Profile colours*) und eine Zone pro
+Hardware-Profil, *Profile 1–3*:
 
-- **Per profile** (Standard): drei LEDs *Profile 1–3*, jede setzt direkt die Farbe ihres Hardware-Profils, auch
-  bei inaktiven Profilen. Geschrieben wird, sobald die Farbe eine Sekunde unverändert blieb (Ziehen im
-  Farbwähler). Ein Profilwechsel schreibt nichts. Quick Colors setzen alle drei LEDs, also alle drei Profile.
-- **Static**: eine Farbe. Anwenden (auch per Quick Color) schreibt sie einmal ins **aktive Profil**. Nach einem
-  Wechsel mit der Profiltaste wird nichts geschrieben; OpenRGB zeigt die Farbe des neuen Profils an (Prüfung alle
-  0,5 s).
+- Profil in der Zonenliste wählen (oder sein Kästchen in der LED-Ansicht anklicken), Farbe wählen und anwenden.
+  Das geht auch bei inaktiven Profilen.
+- **Alle Zonen** wendet eine Farbe auf alle drei Profile an; Quick Colors tun dasselbe.
+- Geschrieben wird, sobald die Farbe eine Sekunde unverändert blieb (Ziehen im Farbwähler). Ein Profilwechsel mit
+  der Profiltaste schreibt nichts.
+- Die LED-Liste neben der Zonenliste gehört zur Geräteansicht von OpenRGB und lässt sich nicht ausblenden; jede
+  Zone hat nur eine LED, sie wird also nicht gebraucht.
 
-- Der Start von OpenRGB oder ein Moduswechsel ändert nichts an der Maus, nur das Anwenden einer Farbe. Ausnahme:
-  Ist beim Start der Oberfläche ein OpenRGB-Profil aktiv (z. B. das Startprofil des Dienstes), übergibt
-  OpenRGB 1.1 dessen Plugin-Daten an das Plugin, das sie wie beim Laden dieses Profils anwendet.
-- **OpenRGB-Profile** speichern Modus und Farben im Plugin-Abschnitt des Profils. Das Laden eines Profils wendet
-  sie wie eine Änderung von Hand an (Static: ins aktive Profil); geschrieben werden nur abweichende Farben. Ein
-  Profil, das vor dem Anstecken der Maus geladen wurde, wird beim Verbinden angewendet.
-- Keiner der Modi heißt „Direct“/„Custom“, Effekte und SDK-Clients übernehmen die Maus also nicht von selbst.
+- Der Start von OpenRGB ändert nichts an der Maus, nur das Anwenden einer Farbe. Ausnahme: Ist beim Start der
+  Oberfläche ein OpenRGB-Profil aktiv (z. B. das Startprofil des Dienstes), übergibt OpenRGB 1.1 dessen
+  Plugin-Daten an das Plugin, das sie wie beim Laden dieses Profils anwendet.
+- **OpenRGB-Profile** speichern die drei Farben im Plugin-Abschnitt des Profils. Das Laden eines Profils wendet
+  sie wie eine Änderung von Hand an; geschrieben werden nur abweichende Farben. Profile aus dem früheren
+  *Static*-Modus (Plugin 1.2 und älter) funktionieren weiter: ihre Farbe geht nur ins aktive Profil. Ein Profil,
+  das vor dem Anstecken der Maus geladen wurde, wird beim Verbinden angewendet.
+- Der Modus heißt nicht „Direct“/„Custom“, Effekte und SDK-Clients übernehmen die Maus also nicht von selbst.
 - Ab- und Anstecken wird erkannt; das Gerät verschwindet und kommt wieder.
 - Das Plugin teilt sich die Sperre mit dem M6980X Configuration Tool (`Local\m6980x_configtool` unter Windows,
   `flock` auf dem hidraw-Gerät unter Linux), beide können also gleichzeitig laufen.
 - Eine Statusseite liegt unter *Einstellungen → M6980X*; Meldungen landen im OpenRGB-Log mit dem Präfix
-  `[M6980X]`.
+  `[M6980X]`. Läuft die Oberfläche als Client des OpenRGB-Dienstes, übernimmt sie dessen Log-Einstellungen; ihre
+  Logdatei enthält die Meldungen dann nur, wenn in den Einstellungen des Dienstes das Schreiben in eine Datei
+  eingeschaltet ist.
 - Andere GHOST-Modelle mit derselben USB-ID (M8000X, M8600, 6980) werden abgelehnt.
 
 ## Hinweise
@@ -58,7 +63,17 @@ Windows 10, offizielles OpenRGB 1.0 (Windows 64-bit, Qt 6.8.3), an der echten Ma
 passiver Start, Farbwechsel (nur das aktive Profil wird geschrieben, bei unveränderter gerundeter Farbe gar
 nichts), Profilwechsel per Profiltaste, Ab-/Anstecken, Deaktivieren des Plugins, gleichzeitiger Betrieb mit
 `m6980x_configtool`; beide Modi inklusive Quick Colors, mit der OpenRGB-Oberfläche als Client des
-OpenRGB-Windows-Dienstes (Plugin in der Oberfläche). Linux: nur gebaut, noch nicht an der Maus ausprobiert.
+OpenRGB-Windows-Dienstes (Plugin in der Oberfläche).
+
+Offizielles OpenRGB 1.1 mit Plugin 1.2.0 (18.10.2026), gleicher Aufbau: die Tests oben erneut, dazu Laden von
+OpenRGB-Profilen durch einen SDK-Client und die Plugin-Daten des aktiven Profils beim Start der Oberfläche.
+
+Plugin 1.3.0 (18.10.2026), gleicher Aufbau: Start, Laden von Profilen im neuen und im früheren Static-Format
+(geschrieben werden nur abweichende Profile), Profilwechsel, die neue Geräteansicht (ein Modus, Zonen
+*Profile 1–3*). Farben aus der Oberfläche auf eine einzelne Zone oder auf *Alle Zonen* anzuwenden, wurde an der
+Maus noch nicht ausprobiert.
+
+Linux: nur gebaut, noch nicht an der Maus ausprobiert.
 
 ## Installation
 

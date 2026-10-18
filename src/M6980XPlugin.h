@@ -66,12 +66,7 @@ private:
     void                    Disconnect();
     void                    Cycle();
     bool                    ApplyProfileRequest(unsigned char profile);
-    void                    ApplyStatic(unsigned char profile);
-    bool                    ShowStaticColor(unsigned char profile);
-    void                    CyclePerProfile();
-    bool                    ShowDeviceColors();
-    int                     LoadModeSetting();
-    void                    SaveModeSetting(int mode);
+    void                    CycleColours();
     void                    HandleError(m6980x::Status status, const char* action);
     void                    SetStatus(const std::string& text);
     void                    LogOnce(unsigned int level, const std::string& text);
@@ -90,8 +85,8 @@ private:
     std::atomic<bool>                   worker_done{false};
 
     /*-----------------------------------------------------*\
-    | Set by the controller callbacks: OpenRGB applied a    |
-    | mode/mode colour, or changed the per-profile colours  |
+    | Set by the controller callbacks: OpenRGB applied the  |
+    | mode, or changed the profile colours                  |
     \*-----------------------------------------------------*/
     std::atomic<bool>                   mode_dirty{false};
     std::atomic<bool>                   leds_dirty{false};
@@ -119,9 +114,8 @@ private:
     std::unique_ptr<m6980x::Mouse>      mouse;
     RGBControllerInterface*             controller          = nullptr;
     int                                 last_profile        = -1;
-    int                                 last_mode           = -1;
     /*-----------------------------------------------------*\
-    | Per-profile mode: colours waiting to become stable    |
+    | Profile colours waiting to become stable              |
     \*-----------------------------------------------------*/
     m6980x::Levels                      pending[m6980x::PROFILES];
     std::chrono::steady_clock::time_point pending_since;

@@ -20,26 +20,31 @@ the LED part of it.
 
 ## Behaviour
 
-Two modes, chosen in the device view (the plugin remembers the last choice):
+Under *Devices → Gigabyte GHOST M6980X* the mouse has one mode (*Profile colours*) and one zone per hardware
+profile, *Profile 1–3*:
 
-- **Per profile** (default): three LEDs *Profile 1–3*, each sets the colour of its hardware profile directly, also
-  of inactive profiles. A colour is written once it stayed unchanged for a second (colour picker dragging).
-  Switching profiles writes nothing. Quick colours set all three LEDs, so all three profiles.
-- **Static**: one colour. Applying it (also with quick colours) writes it once into the **active profile**. After a
-  switch with the profile button nothing is written; OpenRGB shows the colour of the new profile (checked every
-  0.5 s).
+- Pick a profile in the zone list (or click its box in the LED view), choose a colour and apply it. This works for
+  inactive profiles too.
+- **All zones** applies a colour to all three profiles; quick colours do the same.
+- A colour is written once it stayed unchanged for a second (colour picker dragging). Switching profiles with the
+  profile button writes nothing.
+- The LED list next to the zone list is part of OpenRGB's device view and cannot be hidden; every zone has only one
+  LED, so it is not needed.
 
-- Starting OpenRGB or switching the mode changes nothing on the mouse; only applying a colour does. Exception:
-  if an OpenRGB profile is active when the GUI starts (for example the service's startup profile), OpenRGB 1.1
-  hands its plugin data to the plugin, which applies it like loading that profile.
-- **OpenRGB profiles** save the mode and colours in the plugin section of the profile. Loading a profile applies
-  them like a manual change (Static: into the active profile); only colours that differ are written. A profile
-  loaded before the mouse is plugged in is applied once it connects.
-- Neither mode is called "Direct"/"Custom", so effects and SDK clients do not take it over by themselves.
+- Starting OpenRGB changes nothing on the mouse; only applying a colour does. Exception: if an OpenRGB profile is
+  active when the GUI starts (for example the service's startup profile), OpenRGB 1.1 hands its plugin data to the
+  plugin, which applies it like loading that profile.
+- **OpenRGB profiles** save the three colours in the plugin section of the profile. Loading a profile applies them
+  like a manual change; only colours that differ are written. Profiles saved in the former *Static* mode (plugin
+  1.2 and older) still work: their colour goes into the active profile only. A profile loaded before the mouse is
+  plugged in is applied once it connects.
+- The mode is not called "Direct"/"Custom", so effects and SDK clients do not take it over by themselves.
 - Unplugging and replugging the mouse is detected; the device disappears and comes back.
 - The plugin shares a lock with the M6980X Configuration Tool (`Local\m6980x_configtool` on Windows, `flock`
   on the hidraw device on Linux), so both can run at the same time.
-- A status page is under *Settings → M6980X*; messages go to the OpenRGB log with the prefix `[M6980X]`.
+- A status page is under *Settings → M6980X*; messages go to the OpenRGB log with the prefix `[M6980X]`. When the
+  GUI runs as client of the OpenRGB service it takes the log settings from the service, so its log file only
+  contains these messages if logging to a file is enabled in the service's settings.
 - Other GHOST models with the same USB ID (M8000X, M8600, 6980) are rejected.
 
 ## Notes
@@ -57,7 +62,16 @@ Windows 10, official OpenRGB 1.0 (Windows 64-bit, Qt 6.8.3), on the real mouse (
 passive start, colour changes (only the active profile is written, nothing is written when the rounded colour is
 unchanged), profile switches with the profile button, unplugging/replugging, disabling the plugin, running at the
 same time as `m6980x_configtool`; both modes including quick colours, with the OpenRGB GUI running as client of the
-OpenRGB Windows service (plugin in the GUI). Linux: build only, not yet tried on the mouse.
+OpenRGB Windows service (plugin in the GUI).
+
+Official OpenRGB 1.1 with plugin 1.2.0 (2026-10-18), same setup: the tests above again, plus loading OpenRGB
+profiles from an SDK client and the active profile's plugin data at GUI start.
+
+Plugin 1.3.0 (2026-10-18), same setup: start, loading profiles in the new and in the former Static format (only
+differing profiles are written), profile switches, the new device view (one mode, zones *Profile 1–3*). Applying
+colours from the GUI to a single zone or to *All zones* was not yet tried on the mouse.
+
+Linux: build only, not yet tried on the mouse.
 
 ## Installation
 
