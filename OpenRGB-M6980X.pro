@@ -1,8 +1,8 @@
 #-----------------------------------------------------------------------------------------------#
-# OpenRGB 1.0 plugin for the Gigabyte GHOST M6980X mouse                                        #
+# OpenRGB 1.1 plugin for the Gigabyte GHOST M6980X mouse                                        #
 #                                                                                               #
 # Build against the same Qt major version and compiler as the OpenRGB you load it into          #
-# (official Windows 1.0 build: Qt 6.8.3, MSVC 2022, x64).                                       #
+# (official Windows 1.1 build: Qt 6.8.3, MSVC 2022, x64).                                       #
 #-----------------------------------------------------------------------------------------------#
 
 QT          += core gui widgets

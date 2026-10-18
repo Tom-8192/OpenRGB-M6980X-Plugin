@@ -1,7 +1,7 @@
 /*---------------------------------------------------------*\
 | M6980XPlugin.cpp                                          |
 |                                                           |
-|   OpenRGB 1.0 plugin for the Gigabyte GHOST M6980X mouse  |
+|   OpenRGB 1.1 plugin for the Gigabyte GHOST M6980X mouse  |
 |                                                           |
 |   The mouse has three RGB LEDs that always share one      |
 |   colour (their count shows the DPI stage) and stores one |
@@ -36,7 +36,7 @@
 #include "LogManager.h"
 
 #define M6980X_PLUGIN_NAME      "M6980X"
-#define M6980X_PLUGIN_VERSION   "1.1.0"
+#define M6980X_PLUGIN_VERSION   "1.2.0"
 #define M6980X_PLUGIN_URL       "https://github.com/Tom-8192/OpenRGB-M6980X-Plugin"
 #define M6980X_DEVICE_NAME      "Gigabyte GHOST M6980X"
 

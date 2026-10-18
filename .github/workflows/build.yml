@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      # same Qt and compiler as the official OpenRGB 1.0 Windows build
+      # same Qt and compiler as the official OpenRGB 1.1 Windows build
       - uses: jurplel/install-qt-action@v4
         with:
           version: "6.8.3"

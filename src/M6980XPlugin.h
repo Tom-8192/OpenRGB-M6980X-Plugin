@@ -1,7 +1,7 @@
 /*---------------------------------------------------------*\
 | M6980XPlugin.h                                            |
 |                                                           |
-|   OpenRGB 1.0 plugin for the Gigabyte GHOST M6980X mouse  |
+|   OpenRGB 1.1 plugin for the Gigabyte GHOST M6980X mouse  |
 |                                                           |
 |   SPDX-License-Identifier: GPL-2.0-or-later               |
 \*---------------------------------------------------------*/

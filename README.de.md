@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-Ein Plugin für [OpenRGB](https://gitlab.com/CalcProgrammer1/OpenRGB) **1.0**, das die Maus **Gigabyte GHOST
+Ein Plugin für [OpenRGB](https://gitlab.com/CalcProgrammer1/OpenRGB) **1.1**, das die Maus **Gigabyte GHOST
 M6980X** (USB `E0FF:0001`, OEM Areson) mit ihren LED-Farben pro Profil hinzufügt.
 
 Das Protokoll stammt aus dem Reverse Engineering für das M6980X Configuration Tool (`m6980x-driver`); das
@@ -29,7 +29,9 @@ Zwei Modi, Auswahl in der Geräteansicht (das Plugin merkt sich die letzte Wahl)
   Wechsel mit der Profiltaste wird nichts geschrieben; OpenRGB zeigt die Farbe des neuen Profils an (Prüfung alle
   0,5 s).
 
-- Der Start von OpenRGB oder ein Moduswechsel ändert nichts an der Maus, nur das Anwenden einer Farbe.
+- Der Start von OpenRGB oder ein Moduswechsel ändert nichts an der Maus, nur das Anwenden einer Farbe. Ausnahme:
+  Ist beim Start der Oberfläche ein OpenRGB-Profil aktiv (z. B. das Startprofil des Dienstes), übergibt
+  OpenRGB 1.1 dessen Plugin-Daten an das Plugin, das sie wie beim Laden dieses Profils anwendet.
 - **OpenRGB-Profile** speichern Modus und Farben im Plugin-Abschnitt des Profils. Das Laden eines Profils wendet
   sie wie eine Änderung von Hand an (Static: ins aktive Profil); geschrieben werden nur abweichende Farben. Ein
   Profil, das vor dem Anstecken der Maus geladen wurde, wird beim Verbinden angewendet.
@@ -46,7 +48,7 @@ Zwei Modi, Auswahl in der Geräteansicht (das Plugin merkt sich die letzte Wahl)
 - Hat andere Software 0–255-Werte in die Maus geschrieben (z. B. ein älterer OpenRGB-Fork), behält und meldet die
   Maus diese. Das Plugin zeigt eine solche Farbe unverändert an und ersetzt sie beim nächsten Anwenden einer Farbe
   durch Stufen.
-- Beim Abstecken der Maus oder Deaktivieren des Plugins schreibt OpenRGB 1.0
+- Beim Abstecken der Maus oder Deaktivieren des Plugins schreibt OpenRGB (1.0 und 1.1)
   `Device thread still active in base class destructor` ins Log. Das kommt aus OpenRGBs `RGBController_Virtual`,
   dessen Destruktor `Shutdown()` nicht aufruft; die Basisklasse beendet den Thread selbst, es ist also harmlos.
 
@@ -61,7 +63,8 @@ OpenRGB-Windows-Dienstes (Plugin in der Oberfläche). Linux: nur gebaut, noch ni
 ## Installation
 
 Das Plugin muss zum OpenRGB-Build passen: gleiche Qt-Hauptversion und gleicher Compiler. Das Windows-Artefakt
-wird wie das offizielle OpenRGB 1.0 für Windows gebaut (Qt 6.8.3, MSVC 2022, x64).
+wird wie das offizielle OpenRGB 1.1 für Windows gebaut (Qt 6.8.3, MSVC 2022, x64). OpenRGB 1.0 hat dieselbe
+Plugin-API (5); Plugin 1.1.0 ist die letzte Version, die gegen 1.0 gebaut wurde.
 
 - **Windows:** `OpenRGB-M6980X.dll` nach `%APPDATA%\OpenRGB\plugins\` kopieren und OpenRGB neu starten.
 - **Linux:** `libOpenRGB-M6980X.so` nach `~/.config/OpenRGB/plugins/` kopieren. Gegen dasselbe Qt bauen wie dein

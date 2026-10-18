@@ -20,7 +20,7 @@ jobs:
         shell: bash
         run: |
           grep -q "\"VersionStr\": \"${GITHUB_REF_NAME#v}\"" M6980XPlugin.json || { echo "Tag $GITHUB_REF_NAME does not match M6980XPlugin.json"; exit 1; }
-      # same Qt and compiler as the official OpenRGB 1.0 Windows build
+      # same Qt and compiler as the official OpenRGB 1.1 Windows build
       - uses: jurplel/install-qt-action@v4
         with:
           version: "6.8.3"

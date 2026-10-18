@@ -2,7 +2,7 @@
 
 [Deutsch](README.de.md)
 
-An [OpenRGB](https://gitlab.com/CalcProgrammer1/OpenRGB) **1.0** plugin for the **Gigabyte GHOST M6980X**
+An [OpenRGB](https://gitlab.com/CalcProgrammer1/OpenRGB) **1.1** plugin for the **Gigabyte GHOST M6980X**
 mouse (USB `E0FF:0001`, OEM Areson). It adds the mouse as a device with its per-profile LED colours.
 
 The protocol was reverse engineered for the M6980X Configuration Tool (`m6980x-driver`); this plugin uses only
@@ -29,7 +29,9 @@ Two modes, chosen in the device view (the plugin remembers the last choice):
   switch with the profile button nothing is written; OpenRGB shows the colour of the new profile (checked every
   0.5 s).
 
-- Starting OpenRGB or switching the mode changes nothing on the mouse; only applying a colour does.
+- Starting OpenRGB or switching the mode changes nothing on the mouse; only applying a colour does. Exception:
+  if an OpenRGB profile is active when the GUI starts (for example the service's startup profile), OpenRGB 1.1
+  hands its plugin data to the plugin, which applies it like loading that profile.
 - **OpenRGB profiles** save the mode and colours in the plugin section of the profile. Loading a profile applies
   them like a manual change (Static: into the active profile); only colours that differ are written. A profile
   loaded before the mouse is plugged in is applied once it connects.
@@ -45,7 +47,7 @@ Two modes, chosen in the device view (the plugin remembers the last choice):
 - If other software wrote 0–255 values into the mouse (for example an older OpenRGB fork), the mouse keeps and
   reports them. The plugin shows such a colour as it is and replaces it with levels the next time a colour is
   applied.
-- When the mouse is unplugged or the plugin is disabled, OpenRGB 1.0 logs
+- When the mouse is unplugged or the plugin is disabled, OpenRGB (1.0 and 1.1) logs
   `Device thread still active in base class destructor`. This comes from OpenRGB's `RGBController_Virtual`, whose
   destructor does not call `Shutdown()`; the base class stops the thread itself, so it is harmless.
 
@@ -60,7 +62,8 @@ OpenRGB Windows service (plugin in the GUI). Linux: build only, not yet tried on
 ## Installation
 
 The plugin must match the OpenRGB build: same Qt major version and compiler. The Windows artefact is built like
-the official OpenRGB 1.0 Windows release (Qt 6.8.3, MSVC 2022, x64).
+the official OpenRGB 1.1 Windows release (Qt 6.8.3, MSVC 2022, x64). OpenRGB 1.0 has the same plugin API (5);
+plugin 1.1.0 is the last release built against 1.0.
 
 - **Windows:** copy `OpenRGB-M6980X.dll` to `%APPDATA%\OpenRGB\plugins\` and restart OpenRGB.
 - **Linux:** copy `libOpenRGB-M6980X.so` to `~/.config/OpenRGB/plugins/`. Build it against the same Qt as your
@@ -76,7 +79,7 @@ the official OpenRGB 1.0 Windows release (Qt 6.8.3, MSVC 2022, x64).
 git clone --recurse-submodules <this repository>
 ```
 
-The submodule `OpenRGB/` is OpenRGB at `release_1.0`; only its headers are used.
+The submodule `OpenRGB/` is OpenRGB at `release_1.1`; only its headers are used.
 
 - **Windows:** Visual Studio 2022 (C++ build tools) and Qt 6.8.3 `msvc2022_64`, then
   `.\scripts\build-windows.ps1 [-QtDir C:\Qt\6.8.3\msvc2022_64]`. The script runs the protocol test and puts the
